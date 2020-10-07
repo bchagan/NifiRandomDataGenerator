@@ -18,3 +18,15 @@ This processor performs the following functionality:
     - timestamp - A timestamp for the event
 - Provides ability to set the double's precision
 - Provides ability to set output as json or csv
+
+Sample json output:
+
+<pre lang="json">
+{
+  "min" : "80",
+  "max" : "90",
+  "temp" : "82.2",
+  "deviceID" : "91",
+  "timestamp" : "2020-10-07 17:58:10.409"
+}
+</pre>
