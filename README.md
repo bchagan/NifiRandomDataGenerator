@@ -13,7 +13,6 @@ This processor performs the following functionality:
     - metric name
     - min - minimum integer for the range
     - max - maximum integer for the range
-    - output format - json or csv
     - identifier - A configurable domain specific identifier
     - timestamp - A timestamp for the event
 - Provides ability to set the double's precision
