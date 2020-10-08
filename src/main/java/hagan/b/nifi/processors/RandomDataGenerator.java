@@ -29,17 +29,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @CapabilityDescription("Generate random numbers within a range")
 
 public class RandomDataGenerator extends AbstractProcessor {
-    //private final AtomicReference<byte[]> data = new AtomicReference<>();
     DecimalFormat df = new DecimalFormat();
     String randomNumber = "";
     String data = "";
     LinkedHashMap<String, String> contentList = new LinkedHashMap<>();
+    Timestamp timestamp;
 
     private List<PropertyDescriptor> properties;
     private Set<Relationship> relationships;
 
     public static final String MIN_TEXT = "min";
     public static final String MAX_TEXT = "max";
+    public static final String CREATE_ATTRIBUTES_TRUE = "true";
+    public static final String CREATE_ATTRIBUTES_FALSE = "false";
     public static final String EVENT_TIME_TEXT = "timestamp";
     public static final String METRIC_TEXT_DEFAULT = "metric";
     public static final String METRIC_TYPE_INTEGER = "Integer";
@@ -109,6 +111,15 @@ public class RandomDataGenerator extends AbstractProcessor {
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
 
+    public static final PropertyDescriptor CREATE_ATTRIBUTES = new PropertyDescriptor.Builder()
+            .name("Create Attributes")
+            .description("True writes Attributes")
+            .required(false)
+            .defaultValue(CREATE_ATTRIBUTES_TRUE)
+            .allowableValues(CREATE_ATTRIBUTES_TRUE, CREATE_ATTRIBUTES_FALSE)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .build();
+
     public static final Relationship SUCCESS = new Relationship.Builder()
             .name("Success")
             .description("Success Relationship")
@@ -124,6 +135,7 @@ public class RandomDataGenerator extends AbstractProcessor {
         properties.add(OUTPUT_FORMAT);
         properties.add(METRIC_NAME);
         properties.add(IDENTIFIER);
+        properties.add(CREATE_ATTRIBUTES);
         this.properties = Collections.unmodifiableList(properties);
 
         Set<Relationship> relationships = new HashSet<>();
@@ -144,7 +156,7 @@ public class RandomDataGenerator extends AbstractProcessor {
         }
         else randomNumber = Integer.toString(r.ints(min, (max + 1)).limit(1).findFirst().getAsInt());
 
-        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        timestamp = new Timestamp(System.currentTimeMillis());
 
         LinkedHashMap<String, String> cList = new LinkedHashMap<>();
         cList.put(MIN_TEXT, Integer.toString(min));
@@ -162,9 +174,15 @@ public class RandomDataGenerator extends AbstractProcessor {
         contentList = generateData(context);
 
         FlowFile flowfile = session.create();
-        flowfile = session.putAttribute(flowfile, "min", context.getProperty(MIN).getValue());
-        flowfile = session.putAttribute(flowfile, "max", context.getProperty(MAX).getValue());
-        flowfile = session.putAttribute(flowfile, "randomNumber", randomNumber);
+        if(context.getProperty(CREATE_ATTRIBUTES).getValue().equalsIgnoreCase("true")) {
+            flowfile = session.putAttribute(flowfile, "min", context.getProperty(MIN).getValue());
+            flowfile = session.putAttribute(flowfile, "max", context.getProperty(MAX).getValue());
+            flowfile = session.putAttribute(flowfile, "randomNumber", randomNumber);
+            flowfile = session.putAttribute(flowfile, "id", context.getProperty(IDENTIFIER).getValue());
+            flowfile = session.putAttribute(flowfile,  "metric_name", context.getProperty(METRIC_NAME).getValue());
+            flowfile = session.putAttribute(flowfile, "timestamp", timestamp.toString());
+        }
+
 
         if(context.getProperty(OUTPUT_FORMAT).getValue().equalsIgnoreCase("json")) {
             flowfile = session.write(flowfile, new OutputStreamCallback() {
