@@ -16,6 +16,8 @@ This processor performs the following functionality:
     - max - maximum integer for the range
     - identifier - An identifier between 1-100
     - timestamp - A timestamp for the event
+    - lname - last name (optional and randomly generated from 100 names)
+    - fname - first name (optional and randomly generated from 100 names)
 - Provides ability to set the double's precision
 - Provides ability to set output as json or csv
 
@@ -25,8 +27,10 @@ Sample json output:
 {
   "min" : "80",
   "max" : "90",
-  "temp" : "82.2",
-  "deviceID" : "91",
-  "timestamp" : "2020-10-07 17:58:10.409"
+  "temp" : "83.5",
+  "deviceID" : "47",
+  "timestamp" : "2020-10-23 13:49:26.925",
+  "lname" : "Zocchi",
+  "fname" : "Michele"
 }
 </pre>

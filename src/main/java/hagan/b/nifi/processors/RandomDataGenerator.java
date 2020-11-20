@@ -1,5 +1,7 @@
 package hagan.b.nifi.processors;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.Timestamp;
@@ -34,6 +36,7 @@ public class RandomDataGenerator extends AbstractProcessor {
     String data = "";
     LinkedHashMap<String, String> contentList = new LinkedHashMap<>();
     Timestamp timestamp;
+    ArrayList<String> nameList = new ArrayList<String>();
 
     private List<PropertyDescriptor> properties;
     private Set<Relationship> relationships;
@@ -53,6 +56,11 @@ public class RandomDataGenerator extends AbstractProcessor {
     private static final String OUTPUT_MIME_TYPE = "text/csv";
     private static final String OUTPUT_SEPARATOR = ",";
     public static final String IDENTIFIER_DEFAULT = "id";
+    public static final String CREATE_NAMES_TRUE = "true";
+    public static final String CREATE_NAMES_FALSE = "false";
+    public static final String LNAME_TEXT = "lname";
+    public static final String FNAME_TEXT = "fname";
+    public static final String NAME_RANGE_TRUE = "true";
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -111,6 +119,24 @@ public class RandomDataGenerator extends AbstractProcessor {
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
 
+    public static final PropertyDescriptor CREATE_NAMES = new PropertyDescriptor.Builder()
+            .name("Create Names")
+            .description("Creates first and last names")
+            .required(false)
+            .defaultValue(CREATE_NAMES_TRUE)
+            .allowableValues(CREATE_NAMES_TRUE, CREATE_NAMES_FALSE)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .build();
+
+    public static final PropertyDescriptor NAME_SET = new PropertyDescriptor.Builder()
+            .name("Name Set")
+            .description("Number of random names")
+            .required(false)
+            .defaultValue(CREATE_NAMES_TRUE)
+            .allowableValues(CREATE_NAMES_TRUE, CREATE_NAMES_FALSE)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .build();
+
     public static final PropertyDescriptor CREATE_ATTRIBUTES = new PropertyDescriptor.Builder()
             .name("Create Attributes")
             .description("True writes Attributes")
@@ -136,11 +162,29 @@ public class RandomDataGenerator extends AbstractProcessor {
         properties.add(METRIC_NAME);
         properties.add(IDENTIFIER);
         properties.add(CREATE_ATTRIBUTES);
+        properties.add(CREATE_NAMES);
         this.properties = Collections.unmodifiableList(properties);
 
         Set<Relationship> relationships = new HashSet<>();
         relationships.add(SUCCESS);
         this.relationships = Collections.unmodifiableSet(relationships);
+
+        String csvFile = "/Users/bhagan/Documents/fnamelname.csv";
+        String line = "";
+        String cvsSplitBy = ",";
+        int mapKey = 0;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
+            while ((line = br.readLine()) != null) {
+                String[] name = line.split(cvsSplitBy);
+                String flname = name[0] + "," + name[1];
+                nameList.add(flname);
+                mapKey++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private LinkedHashMap<String, String> generateData(final ProcessContext context) {
@@ -158,12 +202,19 @@ public class RandomDataGenerator extends AbstractProcessor {
 
         timestamp = new Timestamp(System.currentTimeMillis());
 
+        int nameIndex = r.ints(0, 101).limit(1).findFirst().getAsInt();
+        String name = nameList.get(nameIndex);
+
+
         LinkedHashMap<String, String> cList = new LinkedHashMap<>();
         cList.put(MIN_TEXT, Integer.toString(min));
         cList.put(MAX_TEXT, Integer.toString(max));
         cList.put(metric_text, randomNumber);
         cList.put(context.getProperty(IDENTIFIER).getValue(), id);
         cList.put(EVENT_TIME_TEXT, timestamp.toString());
+        cList.put("lname", name.substring(0, name.indexOf(",")));
+        cList.put("fname", name.substring(name.indexOf(",") + 1));
+
 
         return cList;
     }
@@ -181,6 +232,8 @@ public class RandomDataGenerator extends AbstractProcessor {
             flowfile = session.putAttribute(flowfile, "id", context.getProperty(IDENTIFIER).getValue());
             flowfile = session.putAttribute(flowfile,  "metric_name", context.getProperty(METRIC_NAME).getValue());
             flowfile = session.putAttribute(flowfile, "timestamp", timestamp.toString());
+            flowfile = session.putAttribute(flowfile, LNAME_TEXT, contentList.get("lname"));
+            flowfile = session.putAttribute(flowfile, FNAME_TEXT, contentList.get("fname"));
         }
 
 
